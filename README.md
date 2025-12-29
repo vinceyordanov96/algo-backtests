@@ -337,12 +337,6 @@ Benchmark (Buy & Hold):
 
 ---
 
-## License
-
-MIT License
-
----
-
 ## Acknowledgments
 
 - [Polygon.io](https://polygon.io/) for market data

@@ -386,20 +386,32 @@ class BackTest:
             
             with open(model_path, 'rb') as f:
                 self.ml_model = pickle.load(f)
+            
+            # Extract the scalers dict from the saved structure
+            # The saved format is {'scaler_type': ..., 'scalers': {...}, 'feature_columns': [...]}
+             # Fallback to entire object if format is different
             with open(scaler_path, 'rb') as f:
-                self.ml_scalers = pickle.load(f)
+                scaler_data = pickle.load(f)
+                
+                if isinstance(scaler_data, dict) and 'scalers' in scaler_data:
+                    self.ml_scalers = scaler_data['scalers']
+                else:
+                    self.ml_scalers = scaler_data 
+            
             with open(features_path, 'rb') as f:
                 self.ml_feature_names = pickle.load(f)
         
         # Use current day data to generate features
         day_features = self._generate_ml_features(current_day_info, precomputed_data)
         
-        signals = SupervisedStrategy.generate_signals(
+        signals = SupervisedStrategy.generate_signals_from_probabilities(
             day_features,
             self.ml_model,
             self.ml_scalers,
             self.ml_feature_names,
-            config.get('window_size', 30)
+            config.get('window_size', 30),
+            config.get('buy_threshold', 0.6),
+            config.get('sell_threshold', 0.4)
         )
 
         return signals

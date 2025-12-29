@@ -145,7 +145,11 @@ class SupervisedStrategy:
     
     @staticmethod
     def generate_signals_from_probabilities(
-        probabilities: np.ndarray,
+        features_df: pd.DataFrame,
+        model,
+        scalers: Dict[str, Any],
+        feature_names: List[str],
+        window_size: int = 30,
         buy_threshold: float = 0.6,
         sell_threshold: float = 0.4
     ) -> np.ndarray:
@@ -153,21 +157,50 @@ class SupervisedStrategy:
         Convert model probability outputs to discrete signals.
         
         Args:
-            probabilities: Model output probabilities (shape: [n_samples, n_classes])
-            buy_threshold: Probability threshold for buy signal
-            sell_threshold: Probability threshold for sell signal
+            features_df: DataFrame with all features for the day
+            model: Trained model with predict_proba() method
+            scalers: Dictionary of fitted scalers per feature
+            feature_names: List of feature column names to use
+            window_size: Lookback window for observations
+            buy_threshold: Threshold for buying
+            sell_threshold: Threshold for selling
             
         Returns:
             Array of signals: 1 (long), -1 (exit), 0 (hold)
         """
-        n = len(probabilities)
+        n = len(features_df)
         signals = np.zeros(n, dtype=np.int32)
         
-        # Assuming binary classification: [prob_down, prob_up]
-        if probabilities.ndim == 2 and probabilities.shape[1] >= 2:
-            prob_up = probabilities[:, 1]
+        if n < window_size:
+            return signals
+        
+        # Normalize features
+        X_normalized = features_df[feature_names].copy()
+        for col in feature_names:
+            if col in scalers:
+                values = X_normalized[col].values.reshape(-1, 1)
+                X_normalized[col] = scalers[col].transform(values).flatten()
+        
+        in_position = False
+        
+        for i in range(window_size, n):
+            window = X_normalized.iloc[i-window_size:i].values
+            obs = window.flatten().reshape(1, -1)
             
-            signals[prob_up >= buy_threshold] = 1
-            signals[prob_up <= sell_threshold] = -1
+            try:
+                # Get probability of class 1 (bullish)
+                prob = model.predict_proba(obs)[0, 1]
+                
+                if prob >= buy_threshold and not in_position:
+                    signals[i] = 1  # Enter long
+                    in_position = True
+                elif prob <= sell_threshold and in_position:
+                    signals[i] = -1  # Exit
+                    in_position = False
+                else:
+                    signals[i] = 0  # Hold
+                    
+            except Exception:
+                signals[i] = 0
         
         return signals
