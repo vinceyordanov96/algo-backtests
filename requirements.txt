@@ -1,0 +1,13 @@
+numpy
+pandas
+numba
+pyarrow
+scikit-learn
+ta
+scipy
+xgboost
+matplotlib
+polars
+pytz
+python-dotenv
+requests

@@ -51,6 +51,13 @@ class Outputs:
                 ("Trade Frequencies", "trade_frequencies"),
                 ("Target Volatilities", "target_volatilities"),
             ],
+            StrategyType.SUPERVISED: [
+                ("Tickers", "tickers"),
+                ("Model Paths", "model_paths"),
+                ("Window Sizes", "window_sizes"),
+                ("Trade Frequencies", "trade_frequencies"),
+                ("Target Volatilities", "target_volatilities"),
+            ]
         }
         
         # Maps strategy types to their result DataFrame columns
@@ -78,6 +85,10 @@ class Outputs:
                 ("Entry Threshold", "Entry Threshold", None),
                 ("Exit Threshold", "Exit Threshold", None),
                 ("Use Dynamic Hedge", "Use Dynamic Hedge", None),
+            ],
+            StrategyType.SUPERVISED: [
+                ("Model Path", "Model Path", None),
+                ("Window Size", "Window Size", None),
             ],
         }
         

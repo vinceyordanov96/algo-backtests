@@ -20,6 +20,7 @@ from outputs import Outputs
 from benchmarks import Benchmarks
 from strats.momentum import Momentum
 from strats.mean_reversion import MeanReversion
+from strats.supervised import SupervisedStrategy
 from strats.mean_reversion_rsi import MeanReversionRSI
 from strats.stat_arb import StatArb
 from strategies import (
@@ -173,6 +174,32 @@ def _run_single_backtest_task(task: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 'slippage_factor': 0.1,
                 'var_confidence': 0.95
             }
+        elif strategy_type == StrategyType.SUPERVISED:
+            model_path = task['model_path']
+            scaler_path = task['scaler_path']
+            features_path = task['features_path']
+            window_size = task['window_size']
+            
+            config = {
+                'strategy_type': strategy_type,
+                'AUM': 100000.0,
+                'commission': 0.0035,
+                'min_comm_per_order': 0.35,
+                'model_path': model_path,
+                'scaler_path': scaler_path,
+                'features_path': features_path,
+                'window_size': window_size,
+                'trade_freq': trade_freq,
+                'sizing_type': "vol_target",
+                'target_vol': target_vol,
+                'max_leverage': 1,
+                'stop_loss_pct': stop_loss_pct,
+                'take_profit_pct': take_profit_pct,
+                'max_drawdown_pct': max_drawdown_pct,
+                'lookback_period': 20,
+                'slippage_factor': 0.1,
+                'var_confidence': 0.95
+            }
         else:
             raise ValueError(f"Unknown strategy type: {strategy_type}")
         
@@ -245,6 +272,9 @@ def _run_single_backtest_task(task: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             result['Entry Threshold'] = entry_threshold
             result['Exit Threshold'] = exit_threshold
             result['Use Dynamic Hedge'] = use_dynamic_hedge
+        elif strategy_type == StrategyType.SUPERVISED:
+            result['Model Path'] = model_path
+            result['Window Size'] = window_size
         
         # Add calculated stats
         result.update(stats)
@@ -457,6 +487,7 @@ class Simulation:
             StrategyType.MEAN_REVERSION: MeanReversion,
             StrategyType.MEAN_REVERSION_RSI: MeanReversionRSI,
             StrategyType.STAT_ARB: StatArb,
+            StrategyType.SUPERVISED: SupervisedStrategy,
         }
         return strategy_classes.get(strategy_type)
     
@@ -675,6 +706,40 @@ class Simulation:
         if target_volatilities is not None:
             self.target_volatilities = target_volatilities
 
+    
+    def set_supervised_parameters(
+        self,
+        model_paths: List[str] = None,
+        scaler_paths: List[str] = None,
+        features_paths: List[str] = None,
+        window_sizes: List[int] = None,
+        trade_frequencies: List[int] = None,
+        target_volatilities: List[float] = None
+    ) -> None:
+        """
+        Set parameter grids for supervised ML strategy.
+        
+        Args:
+            model_paths: List of paths to saved models
+            scaler_paths: List of paths to saved scalers
+            features_paths: List of paths to saved features
+            window_sizes: List of window sizes to test
+            trade_frequencies: List of trade frequency values (minutes)
+            target_volatilities: List of target volatility values
+        """
+        if model_paths is not None:
+            self.model_paths = model_paths
+        if scaler_paths is not None:
+            self.scaler_paths = scaler_paths
+        if features_paths is not None:
+            self.features_paths = features_paths
+        if window_sizes is not None:
+            self.window_sizes = [30]
+        if trade_frequencies is not None:
+            self.trade_frequencies = [15]
+        if target_volatilities is not None:
+            self.target_volatilities = [0.015]
+
 
     def load_risk_free_rate(self) -> None:
         """
@@ -759,6 +824,22 @@ class Simulation:
                 df = pd.read_csv(f"data/{ticker}/{existing_intra[0]}", index_col=0)
                 df_daily = pd.read_csv(f"data/{ticker}/{existing_daily[0]}", index_col=0)
                 
+                # # Filter down data to begin from '2025-06-01'
+                # # Drop the unnamed index column if present
+                # if 'Unnamed: 0' in df.columns:
+                #     df = df.drop(columns=['Unnamed: 0'])
+                # if 'Unnamed: 0' in df_daily.columns:
+                #     df_daily = df_daily.drop(columns=['Unnamed: 0'])
+                
+                # # Filter intraday by caldt
+                # df = df[df['caldt'] >= '2025-06-01']
+                
+                # # Filter daily by 'day' column (check your actual column name)
+                # if 'day' in df_daily.columns:
+                #     df_daily = df_daily[df_daily['day'] >= '2025-06-01']
+                # elif 'caldt' in df_daily.columns:
+                #     df_daily = df_daily[df_daily['caldt'] >= '2025-06-01']
+
                 if len(df) > 0 and len(df_daily) > 0:
                     logger.info(f"Loaded {len(df)} intraday records, {len(df_daily)} daily records")
                     # Cache the data
@@ -838,6 +919,11 @@ class Simulation:
             return (len(self.pairs) * len(self.stat_arb_zscore_lookbacks) *
                     len(self.entry_thresholds) * len(self.stat_arb_exit_thresholds) *
                     len(self.use_dynamic_hedge_options) * len(self.trade_frequencies) *
+                    len(self.target_volatilities) * len(self.stop_loss_pcts) *
+                    len(self.take_profit_pcts) * len(self.max_drawdown_pcts))
+        elif self.strategy_type == StrategyType.SUPERVISED:
+            return (len(self.tickers) * len(self.model_paths) * 
+                    len(self.window_sizes) * len(self.trade_frequencies) * 
                     len(self.target_volatilities) * len(self.stop_loss_pcts) *
                     len(self.take_profit_pcts) * len(self.max_drawdown_pcts))
         else:
@@ -1045,6 +1131,58 @@ class Simulation:
         return tasks
 
 
+    def _generate_supervised_tasks(
+        self,
+        ticker: str,
+        df: pd.DataFrame,
+        df_daily: pd.DataFrame,
+        market_calendar: Dict
+    ) -> List[Dict[str, Any]]:
+        """
+        Generate task dictionaries for supervised ML strategy.
+        
+        Args:
+            ticker: Ticker symbol
+            df: Intraday DataFrame
+            df_daily: Daily DataFrame
+            market_calendar: Market calendar dictionary
+            
+        Returns:
+            List of task dictionaries
+        """
+        tasks = []
+        
+        # Iterate over model artifact sets
+        for i, model_path in enumerate(self.model_paths):
+            scaler_path = self.scaler_paths[i]
+            features_path = self.features_paths[i]
+            
+            for window_size in self.window_sizes:
+                for trade_freq in self.trade_frequencies:
+                    for target_vol in self.target_volatilities:
+                        for stop_loss_pct in self.stop_loss_pcts:
+                            for take_profit_pct in self.take_profit_pcts:
+                                for max_drawdown_pct in self.max_drawdown_pcts:
+                                    tasks.append({
+                                        'ticker': ticker,
+                                        'df': df,
+                                        'df_daily': df_daily,
+                                        'strategy_type': StrategyType.SUPERVISED,
+                                        'model_path': model_path,
+                                        'scaler_path': scaler_path,
+                                        'features_path': features_path,
+                                        'window_size': window_size,
+                                        'trade_freq': trade_freq,
+                                        'target_vol': target_vol,
+                                        'stop_loss_pct': stop_loss_pct,
+                                        'take_profit_pct': take_profit_pct,
+                                        'max_drawdown_pct': max_drawdown_pct,
+                                        'risk_free_rate_series': self.risk_free_rate_series,
+                                        'market_calendar': market_calendar
+                                    })
+        return tasks
+
+
     def run_sequential(self) -> pd.DataFrame:
         """
         Run the simulation sequentially (for debugging or when parallelism isn't needed).
@@ -1104,6 +1242,8 @@ class Simulation:
                     tasks.extend(self._generate_mean_reversion_tasks(ticker, df, df_daily, market_calendar))
                 elif self.strategy_type == StrategyType.MEAN_REVERSION_RSI:
                     tasks.extend(self._generate_mean_reversion_rsi_tasks(ticker, df, df_daily, market_calendar))
+                elif self.strategy_type == StrategyType.SUPERVISED:
+                    tasks.extend(self._generate_supervised_tasks(ticker, df, df_daily, market_calendar))
         
         # Run simulations
         completed = 0
@@ -1193,6 +1333,8 @@ class Simulation:
                     tasks.extend(self._generate_mean_reversion_tasks(ticker, df, df_daily, market_calendar))
                 elif self.strategy_type == StrategyType.MEAN_REVERSION_RSI:
                     tasks.extend(self._generate_mean_reversion_rsi_tasks(ticker, df, df_daily, market_calendar))
+                elif self.strategy_type == StrategyType.SUPERVISED:
+                    tasks.extend(self._generate_supervised_tasks(ticker, df, df_daily, market_calendar))
         
         logger.info(f"Prepared {len(tasks)} tasks for parallel execution")
         
@@ -1297,7 +1439,7 @@ def main():
     parser.add_argument(
         '--strategy', 
         type=str, 
-        choices=['momentum', 'mean_reversion', 'mean_reversion_rsi', 'stat_arb', 'all'],
+        choices=['momentum', 'mean_reversion', 'mean_reversion_rsi', 'stat_arb', 'supervised', 'all'],
         default='momentum',
         help='Strategy type to simulate (default: momentum)'
     )
@@ -1328,7 +1470,8 @@ def main():
             StrategyType.MOMENTUM, 
             StrategyType.MEAN_REVERSION, 
             StrategyType.MEAN_REVERSION_RSI,
-            StrategyType.STAT_ARB
+            StrategyType.STAT_ARB,
+            StrategyType.SUPERVISED
         ]
     elif args.strategy == 'momentum':
         strategies_to_run = [StrategyType.MOMENTUM]
@@ -1338,6 +1481,8 @@ def main():
         strategies_to_run = [StrategyType.MEAN_REVERSION_RSI]
     elif args.strategy == 'stat_arb':
         strategies_to_run = [StrategyType.STAT_ARB]
+    elif args.strategy == 'supervised':
+        strategies_to_run = [StrategyType.SUPERVISED]
     
     all_results = []
     

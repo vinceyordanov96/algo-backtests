@@ -27,6 +27,11 @@ class Constants:
         self.timezone = 'America/New_York'
         self.start_date = str(date(2024, 1, 1))
         self.end_date = str(date(2025, 12, 18))
+        
+        # ML Strategy constants
+        self.ml_model_dir = 'ml/models'
+        self.ml_window_sizes = [30]
+        self.ml_model_types = ['gradient_boosting']
 
         # Base AUM constant (accessible directly as constants.AUM_0)
         self.AUM_0 = 100000.0

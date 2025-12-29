@@ -46,6 +46,7 @@
 └───────────────────┴──────────────────────────────────────────────┴──────────────────────────────────────────────┘
 """
 
+import pickle
 import pandas as pd
 import numpy as np
 import warnings
@@ -60,6 +61,8 @@ from strats.momentum import Momentum
 from strats.mean_reversion import MeanReversion
 from strats.mean_reversion_rsi import MeanReversionRSI
 from strats.stat_arb import StatArb
+from strats.supervised import SupervisedStrategy
+from ml.preprocessing import PreProcessing
 from strategies import (
     StrategyType,
     StrategyFactory,
@@ -114,6 +117,13 @@ class BackTest:
         self.multiplier = constants.multiplier
         self.period = constants.period
         self.holidays = constants.holidays
+
+        # ML parameters
+        self.ml_model_type = 'random_forest'
+        self.ml_model = None
+        self.ml_scalers = None
+        self.ml_feature_names = None
+        self._ml_preprocessor = None
         
         # Store risk-free rate series (will be set externally)
         self.risk_free_rate_series = None
@@ -311,6 +321,88 @@ class BackTest:
             hedge_ratio,
             use_dynamic_hedge
         )
+
+
+    def _generate_ml_features(
+        self,
+        current_day_info: Dict[str, Any],
+        precomputed_data: Dict[Any, Dict[str, Any]]
+    ) -> pd.DataFrame:
+        """
+        Generate ML features from precomputed intraday data for a single day.
+        
+        Delegates to PreProcessing.generate_features_from_arrays() to ensure
+        feature consistency between training and inference.
+        
+        Args:
+            current_day_info: Dictionary containing current day's precomputed data:
+                - close_prices: np.ndarray of close prices
+                - volumes: np.ndarray of volumes  
+                - vwap: np.ndarray of VWAP values
+                - sigma_open: np.ndarray of sigma values
+                - open: float, opening price
+                - ticker_dvol: float, daily volatility
+            precomputed_data: Dictionary of all precomputed daily data (unused,
+                             reserved for future multi-day feature generation)
+            
+        Returns:
+            DataFrame with features matching the trained model's expected input
+        """
+        # Lazy initialization of preprocessor
+        if not hasattr(self, '_ml_preprocessor') or self._ml_preprocessor is None:
+            self._ml_preprocessor = PreProcessing(min_lookback=0)
+        
+        # Generate features using the shared preprocessing logic
+        features_df = self._ml_preprocessor.generate_features_from_arrays(
+            current_day_info=current_day_info,
+            feature_names=self.ml_feature_names
+        )
+        
+        return features_df
+
+    
+    def _generate_ml_signals(
+        self,
+        config: Dict[str, Any],
+        current_day_info: Dict[str, Any],
+        precomputed_data: Dict[Any, Dict[str, Any]]
+    ) -> np.ndarray:
+        """
+        Generate ML signals from precomputed intraday data for a single day.
+        
+        Args:
+            config: Configuration dictionary
+            current_day_info: Dictionary containing current day's precomputed data
+            precomputed_data: Dictionary of all precomputed daily data
+            
+        Returns:
+            Array of signals: 1 (long), -1 (exit), 0 (hold)
+        """
+
+        if self.ml_model is None:
+            model_path = config.get('model_path')
+            scaler_path = config.get('scaler_path')
+            features_path = config.get('features_path')
+            
+            with open(model_path, 'rb') as f:
+                self.ml_model = pickle.load(f)
+            with open(scaler_path, 'rb') as f:
+                self.ml_scalers = pickle.load(f)
+            with open(features_path, 'rb') as f:
+                self.ml_feature_names = pickle.load(f)
+        
+        # Use current day data to generate features
+        day_features = self._generate_ml_features(current_day_info, precomputed_data)
+        
+        signals = SupervisedStrategy.generate_signals(
+            day_features,
+            self.ml_model,
+            self.ml_scalers,
+            self.ml_feature_names,
+            config.get('window_size', 30)
+        )
+
+        return signals
 
 
     def backtest(
@@ -587,6 +679,10 @@ class BackTest:
                     strat.at[current_day, 'spread_zscore'] = zscore[-1]
                 if len(hedge_ratios) > 0 and not np.all(np.isnan(hedge_ratios)):
                     strat.at[current_day, 'hedge_ratio'] = hedge_ratios[-1]
+
+            elif strategy_type == StrategyType.SUPERVISED:
+                signals = self._generate_ml_signals(config, current_day_info, precomputed_data)
+            
             else:
                 raise ValueError(f"Unknown strategy type: {strategy_type}")
             

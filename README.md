@@ -1,16 +1,22 @@
 # Trading Strategy Backtesting Framework
 
+Stemming from a personal project, the code in this repository aims to demonstrate how we can implement a scalable and reusable backtesting framework which simulates realistic historical trading, provided an algorithmic trading strategy (i.e., Momentum, Mean Reversion, RL etc.). Running a simulation amounts to selecting one of the available strategies and testing its historical performance on a given asset. Upon finishing a simulation, the user gets several outputs: 
+
+1) The best performing strategy (according to Sharpe/Sortino/Calmar ratio) along with its parameters.
+2) A granular overview detailing the `BUY`, `HOLD`, and `SELL` events of the best performing strategy. 
+3) An overview containing strategy performance metrics & benchmarks.
+
 ## Overview
 
 This framework aims to enable rigorous backtesting of intraday trading strategies with realistic execution modeling, risk management, and detailed performance analytics. It supports parallel execution for rapid parameter optimization and includes safeguards against common backtesting pitfalls.
 
-### Performance Considerations
+### Key Considerations
 
 - **Vectorized Operations**: NumPy-based signal calculations.
-- **JIT Compilation**: Numba-accelerated position simulation and portfolio calculations
-- **Parallel Execution**: Multi-process parameter sweep using `ProcessPoolExecutor`
-- **Realistic Execution**: Next-bar execution, slippage modeling, and commission costs
-- **Risk Management**: Stop-loss, take-profit, max drawdown circuit breakers
+- **JIT Compilation**: Numba-accelerated position simulation and portfolio calculations.
+- **Parallel Execution**: Multi-process parameter sweep using `ProcessPoolExecutor`.
+- **Realistic Execution**: Next-bar execution, slippage modeling, and commission costs.
+- **Risk Management**: Stop-loss, take-profit, max drawdown circuit breakers.
 - **Performance Metrics**: Sharpe, Sortino, Calmar, Beta, Alpha, Information Ratio, etc.
 
 ---
@@ -81,6 +87,24 @@ Trades the spread between two correlated assets based on z-score deviation.
 **Signal Logic**:
 - **Entry**: Spread Z-score exceeds entry threshold
 - **Exit**: Spread Z-score reverts to exit threshold
+
+---
+
+### 5. Supervised Learning (XGBoost, Random Forest)
+
+Generates signals based on a trained model with 50+ features consisting of volume, volatility and price action intraday data.
+
+| Parameter | Description |
+|-----------|-------------|
+| `lookback_window` | Lookback window for observations |
+| `forecast_horizon` | The number of ticks before generating signal |
+| `return_threshold` | Label for position exit to take profit (0.1%) |
+| `class_weight` | How to handle class imbalance during training |
+
+**Signal Logic**:
+- **Entry**: Signal = 1
+- **Hold**: Signal = 0
+- **Exit**: Signal = -1 (threshold > 0.1%)
 
 ---
 

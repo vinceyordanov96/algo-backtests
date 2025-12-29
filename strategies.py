@@ -6,6 +6,7 @@ from enum import Enum
 from strats.momentum import Momentum
 from strats.mean_reversion import MeanReversion
 from strats.mean_reversion_rsi import MeanReversionRSI
+from strats.supervised import SupervisedStrategy
 from strats.stat_arb import StatArb
 
 
@@ -17,6 +18,7 @@ class StrategyType(Enum):
     MEAN_REVERSION = "mean_reversion"
     MEAN_REVERSION_RSI = "mean_reversion_rsi"
     STAT_ARB = "stat_arb"
+    SUPERVISED = "supervised"
 
 
 @njit(cache=True)
@@ -247,7 +249,8 @@ class StrategyFactory:
         StrategyType.MOMENTUM: Momentum.generate_signals,
         StrategyType.MEAN_REVERSION: MeanReversion.generate_signals_with_zscore,
         StrategyType.MEAN_REVERSION_RSI: MeanReversionRSI.generate_signals,
-        StrategyType.STAT_ARB: StatArb.generate_signals
+        StrategyType.STAT_ARB: StatArb.generate_signals,
+        StrategyType.SUPERVISED: SupervisedStrategy.generate_signals
     }
     
     @classmethod
@@ -320,7 +323,8 @@ class StrategyFactory:
         required_momentum = ['band_mult']
         required_mean_reversion = ['zscore_lookback', 'n_std_upper', 'n_std_lower']
         required_stat_arb = ['zscore_lookback', 'entry_threshold']
-        
+        required_supervised = ['model_path', 'window_size']
+
         # Check common parameters
         for param in required_common:
             if param not in config:
@@ -339,5 +343,9 @@ class StrategyFactory:
             for param in required_stat_arb:
                 if param not in config:
                     raise ValueError(f"Missing required stat arb parameter: {param}")
+        elif strategy_type == StrategyType.SUPERVISED:
+            for param in required_supervised:
+                if param not in config:
+                    raise ValueError(f"Missing required supervised parameter: {param}")
         
         return True
