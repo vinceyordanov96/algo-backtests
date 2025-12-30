@@ -14,6 +14,12 @@ class Momentum:
         self,
         band_mult: List[float] = [0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1]
     ):
+        """
+        Initialize the momentum strategy Class with default parameters.
+        
+        Args:
+            band_mult: List of band multipliers to test (default: [0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1]).
+        """
         self.band_mult = band_mult
     
     def get_parameter_grid(self) -> Dict[str, list]:

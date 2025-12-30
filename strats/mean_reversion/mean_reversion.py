@@ -4,7 +4,7 @@ from typing import Tuple, Dict, Any, List
 
 
 @njit(cache=True)
-def calculate_rolling_mean_std_numba(
+def calculate_rolling_mean_std(
     prices: np.ndarray,
     lookback: int
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -31,7 +31,7 @@ def calculate_rolling_mean_std_numba(
 
 
 @njit(cache=True)
-def calculate_zscore_numba(
+def calculate_zscore(
     prices: np.ndarray,
     rolling_mean: np.ndarray,
     rolling_std: np.ndarray
@@ -69,6 +69,14 @@ class MeanReversion:
         n_std_lower: List[float] = [1.5, 2.0],
         exit_threshold: List[float] = [0.0]
     ):
+        """
+        Initialize the mean reversion strategy Class with default parameters.
+        Args:
+            lookback_period: List of lookback periods for moving average and std calculation
+            n_std_upper: List of number of standard deviations for upper band (sell signal)
+            n_std_lower: List of number of standard deviations for lower band (buy signal)
+            exit_threshold: List of z-score thresholds for exit signals (default 0.0)
+        """
         self.lookback_period = lookback_period
         self.n_std_upper = n_std_upper
         self.n_std_lower = n_std_lower
@@ -114,13 +122,13 @@ class MeanReversion:
         n = len(close_prices)
         
         # Calculate rolling mean and std using Numba
-        rolling_mean, rolling_std = calculate_rolling_mean_std_numba(
+        rolling_mean, rolling_std = calculate_rolling_mean_std(
             close_prices.astype(np.float64),
             lookback_period
         )
         
         # Calculate z-score
-        zscore = calculate_zscore_numba(
+        zscore = calculate_zscore(
             close_prices.astype(np.float64), 
             rolling_mean, 
             rolling_std
@@ -164,12 +172,12 @@ class MeanReversion:
         """
         n = len(close_prices)
         
-        rolling_mean, rolling_std = calculate_rolling_mean_std_numba(
+        rolling_mean, rolling_std = calculate_rolling_mean_std(
             close_prices.astype(np.float64),
             lookback_period
         )
         
-        zscore = calculate_zscore_numba(
+        zscore = calculate_zscore(
             close_prices.astype(np.float64), 
             rolling_mean, 
             rolling_std
