@@ -12,4 +12,11 @@ pip install pandas
 pip install numba
 pip install scikit-learn
 pip install ta
-pip install pyarro
+pip install pyarrow
+pip install scipy
+pip install xgboost
+pip install matplotlib
+pip install polars
+pip install pytz
+pip install python-dotenv
+pip install requests
