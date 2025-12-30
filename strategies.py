@@ -3,11 +3,11 @@ from numba import njit
 from typing import Dict, Tuple, Any, Callable
 from enum import Enum
 
-from strats.momentum import Momentum
-from strats.mean_reversion import MeanReversion
-from strats.mean_reversion_rsi import MeanReversionRSI
-from strats.supervised import SupervisedStrategy
-from strats.stat_arb import StatArb
+from strats.momentum.momentum import Momentum
+from strats.mean_reversion.mean_reversion import MeanReversion
+from strats.mean_reversion.mean_reversion_rsi import MeanReversionRSI
+from strats.ml.supervised import SupervisedStrategy
+from strats.stat_arb.stat_arb import StatArb
 
 
 class StrategyType(Enum):

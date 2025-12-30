@@ -18,11 +18,11 @@ from backtest import BackTest
 from constants import Constants
 from outputs import Outputs
 from benchmarks import Benchmarks
-from strats.momentum import Momentum
-from strats.mean_reversion import MeanReversion
-from strats.supervised import SupervisedStrategy
-from strats.mean_reversion_rsi import MeanReversionRSI
-from strats.stat_arb import StatArb
+from strats.momentum.momentum import Momentum
+from strats.mean_reversion.mean_reversion import MeanReversion
+from strats.ml.supervised import SupervisedStrategy
+from strats.mean_reversion.mean_reversion_rsi import MeanReversionRSI
+from strats.stat_arb.stat_arb import StatArb
 from strategies import (
     StrategyType,
     StrategyFactory
