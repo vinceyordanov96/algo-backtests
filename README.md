@@ -171,21 +171,59 @@ Optionally, **intraday rebalancing** adjusts positions when volatility changes s
 
 ```
 algo-backtests/
-├── backtest.py           # Core backtesting module
-├── simulation.py         # Parameter sweep with parallel execution
-├── strategies.py         # Signal generation and position simulation
-├── benchmarks.py         # Benchmark comparison metrics
-├── outputs.py            # Formatted output generation
-├── utils.py              # Utility functions (Sharpe, VaR, etc.)
-├── constants.py          # Configuration constants
-├── data.py               # Polygon.io data fetching
+│
+├── ml/
+│   ├── __init__.py
+│   ├── feature_generation.py
+│   ├── feature_normalization.py
+│   ├── feature_selection.py
+│   ├── model_artifacts.py
+│   ├── training_config.py
+│   ├── training_metrics.py
+│   ├── training_pipeline.py
+│   └── training_results.py
 │
 ├── strats/
-│   ├── momentum.py            # Momentum strategy implementation
-│   ├── mean_reversion.py      # Z-score mean reversion
-│   ├── mean_reversion_rsi.py  # RSI + SMA mean reversion
-│   └── stat_arb.py            # Statistical arbitrage (pairs)
-└── 
+│   ├── __init__.py 
+│   ├── base.py                   
+│   ├── classification.py                  
+│   ├── factory.py         
+│   ├── mean_reversion_rsi.py
+│   ├── mean_reversion.py
+│   ├── momentum.py                
+│   └── stat_arb.py
+│
+├── core/
+│   ├── __init__.py
+│   ├── benchmarks.py         # Alpha, Beta, R^2, Correlation, etc. 
+│   ├── metrics.py            # Sharpe, Sortino, Calmar calculations 
+│   ├── risk.py               # Stop-loss, take-profit, drawdown logic
+│   └── portfolio.py          # Portfolio simulation (Numba functions)
+│
+├── connectors/
+│   ├── __init__.py
+│   ├── base.py               # Base Interface for connectors
+│   ├── calendar.py           # Market calendar handling
+│   ├── data.py               # DataFetcher class
+│   ├── manager.py            # Data management (save, load, etc.)
+│   ├── polygon.py            # Data fetching logic for Polygon.io
+│   └── yfinance.py           # Data fetching logic for yFinance
+│  
+├── backtesting/
+│   ├── __init__.py
+│   ├── engine.py             # Core backtest loop (simplified)
+│   └── results.py            # Results container and analysis
+│
+├── simulation/
+│   ├── __init__.py
+│   ├── runner.py             # Parallel execution
+│   ├── tasks.py              # Task generation per strategy
+│   └── config.py             # Configuration management
+│
+└── utils/
+    ├── __init__.py
+    ├── outputs.py
+    └── constants.py
 ```
 
 ---

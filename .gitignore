@@ -208,10 +208,24 @@ __marimo__/
 
 
 # Local folders
-data/
+data/AMD/
+data/PLTR/
+data/META/
+data/GOOG/
+data/NFLX/
+data/SES/
 plots/
 saved_strategies/
 simulations/
 saved-data/
 ml/models/
 run_ml.py
+run_example.py
+
+# Ignore outputs
+outputs/data/
+outputs/models/
+outputs/strategies/
+structure.md
+
+ml/results/
