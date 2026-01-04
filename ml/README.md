@@ -6,15 +6,14 @@ Supervised machine learning pipeline for classification-based trading strategies
 
 This module provides a complete ML training pipeline that:
 
-1. Generates technical features from OHLCV data
+1. Generates TA features from OHLCV data
 2. Creates binary classification labels (price up/down)
 3. Performs feature selection and normalization
 4. Trains tree-based models (RandomForest, GradientBoosting, XGBoost)
 5. Saves artifacts for backtesting integration
 
-**Critical Design Principle**: All fitting (feature selection, normalization) happens on training data only. Test and validation sets are transformed using fitted parameters to prevent data leakage.
+**Note**: All fitting (feature selection, normalization) happens on training data only. Test and validation sets are transformed using fitted parameters to prevent data leakage.
 
----
 
 ## Components
 
@@ -59,8 +58,8 @@ Generates 60+ technical indicators from OHLCV data.
 
 Two-stage feature selection to reduce dimensionality.
 
-**Stage 1**: Variance threshold (removes near-constant features)
-**Stage 2**: Model-based selection using RandomForest cross-validation ROC-AUC
+- **Stage 1**: Variance threshold (removes near-constant features)
+- **Stage 2**: Model-based selection using RandomForest cross-validation ROC-AUC
 
 #
 
