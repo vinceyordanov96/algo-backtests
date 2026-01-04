@@ -93,6 +93,8 @@ The backtest is configured via a dictionary with the following parameters:
 | `AUM` | float | Initial portfolio value |
 | `trade_freq` | int | Minutes between trade evaluations |
 
+---
+
 ### Risk Management Parameters
 
 | Parameter | Type | Default | Description |
@@ -100,6 +102,8 @@ The backtest is configured via a dictionary with the following parameters:
 | `stop_loss_pct` | float | 0.02 | Stop loss threshold (2%) |
 | `take_profit_pct` | float | 0.04 | Take profit threshold (4%) |
 | `max_drawdown_pct` | float | 0.15 | Max drawdown before forced liquidation |
+
+---
 
 ### Position Sizing Parameters
 
@@ -110,6 +114,8 @@ The backtest is configured via a dictionary with the following parameters:
 | `max_leverage` | float | 1.0 | Maximum leverage allowed |
 | `kelly_fraction` | float | 0.5 | Fraction of Kelly to use |
 | `kelly_lookback` | int | 60 | Lookback period for Kelly calc |
+
+---
 
 ### Transaction Cost Parameters
 
