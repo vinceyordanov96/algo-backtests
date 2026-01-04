@@ -8,7 +8,7 @@ The backtesting module provides a complete framework for running historical simu
 
 ## Components
 
-### BacktestEngine (engine.py)
+### 1) BacktestEngine (engine.py)
 
 The main execution engine that orchestrates the backtest loop.
 
@@ -32,7 +32,9 @@ The main execution engine that orchestrates the backtest loop.
 - `kelly` - Kelly Criterion based sizing
 - `kelly_vol_blend` - Blended Kelly + volatility targeting
 
-### BacktestResults
+--- 
+
+### 2) BacktestResults
 
 Container for backtest output data with built-in analysis methods.
 
@@ -49,7 +51,9 @@ Container for backtest output data with built-in analysis methods.
 - `aum` - Strategy AUM series
 - `benchmark_aum` - Benchmark AUM series
 
-### BacktestStatistics
+---
+
+### 3) BacktestStatistics
 
 Dataclass containing all calculated performance metrics.
 
@@ -74,6 +78,8 @@ Dataclass containing all calculated performance metrics.
 - Alpha (annualized), Beta
 - Correlation, R-squared
 - Information ratio, Treynor ratio
+
+---
 
 ## Configuration
 
@@ -112,6 +118,8 @@ The backtest is configured via a dictionary with the following parameters:
 | `commission` | float | 0.0035 | Commission per share |
 | `slippage_factor` | float | 0.1 | Slippage in basis points |
 
+---
+
 ### Strategy-Specific Parameters
 
 **Momentum:**
@@ -125,6 +133,8 @@ The backtest is configured via a dictionary with the following parameters:
 - `model_path`, `scaler_path`, `features_path` - Model artifacts
 - `buy_threshold`, `sell_threshold` - Probability thresholds
 - `precomputed_probabilities` - Pre-computed predictions (for speed)
+
+---
 
 ## Usage
 
@@ -177,6 +187,8 @@ results.plot_drawdown(save_path='drawdown.png')
 results.to_csv('strategy_results.csv')
 ```
 
+---
+
 ### ML Strategy Example
 
 ```python
@@ -216,35 +228,8 @@ print(f"Beta: {stats.beta:.2f}")
 print(f"Information Ratio: {stats.information_ratio:.2f}")
 ```
 
-### Pairs Trading Example
+---
 
-```python
-from backtesting import BacktestEngine
-from backtesting.engine import StrategyType
-
-engine = BacktestEngine(ticker='AAPL', ticker_b='MSFT')
-
-config = {
-    'strategy_type': StrategyType.STAT_ARB,
-    'AUM': 100000.0,
-    'trade_freq': 30,
-    'stop_loss_pct': 0.03,
-    'take_profit_pct': 0.05,
-    'zscore_lookback': 60,
-    'entry_threshold': 2.0,
-    'exit_threshold': 0.0,
-    'use_dynamic_hedge': True,
-}
-
-results = engine.run(
-    df=df_aapl,
-    ticker_daily_data=df_aapl_daily,
-    all_days=trading_days,
-    config=config,
-    df_b=df_msft,
-    ticker_b_daily_data=df_msft_daily
-)
-```
 
 ### Accessing Raw Data
 
@@ -268,6 +253,8 @@ strategy_df = results.strategy_df
 # - spread_zscore: End of day spread z-score
 # - hedge_ratio: Dynamic hedge ratio
 ```
+
+---
 
 ## Integration with SimulationRunner
 
@@ -297,6 +284,8 @@ results_df = runner.run(parallel=True)
 best = runner.get_best_by_ticker(results_df, metric='Sharpe Ratio (Strategy)')
 ```
 
+---
+
 ## Performance Optimizations
 
 The engine includes several optimizations for speed:
@@ -305,6 +294,8 @@ The engine includes several optimizations for speed:
 2. **Numba JIT Compilation** - Position simulation and portfolio calculations use `@njit` compiled functions
 3. **Precomputed ML Probabilities** - For supervised strategies, probabilities can be pre-computed once and reused across parameter sweeps (10-20x speedup)
 4. **Day-to-Index Mapping** - Fast lookup of DataFrame indices by trading day
+
+---
 
 ## Output Files
 
