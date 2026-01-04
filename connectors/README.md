@@ -21,7 +21,7 @@ Unified data fetcher that auto-selects or uses a specified source.
 1. If `POLYGON_API_KEY` environment variable is set → uses Polygon
 2. Otherwise → falls back to yfinance (free, no key required)
 
----
+#
 
 ### 2) Connectors
 
@@ -56,7 +56,7 @@ Direct access to Yahoo Finance via the yfinance library.
 - 2-60 minute data: Last 60 days only
 - Daily and higher intervals: Full history available
 
----
+#
 
 ### DataManager
 
@@ -83,7 +83,7 @@ outputs/data/
         └── {TICKER}_dividends_YYYYMMDD_HHMMSS.csv
 ```
 
----
+#
 
 ### MarketCalendar
 
@@ -95,7 +95,7 @@ US equity market calendar management.
 - Trading day validation
 - Trading minutes calculation
 
----
+#
 
 ## Data Schema
 
@@ -120,7 +120,7 @@ All connectors produce DataFrames with standardized schemas.
 | `sigma_open` | float | Rolling std of move from open |
 | `dividend` | float | Dividend amount (0 if none) |
 
----
+#
 
 ### Daily Schema
 
@@ -163,7 +163,8 @@ fetcher = DataFetcher(
 )
 df_intraday, df_daily = fetcher.process_data()
 ```
----
+
+#
 
 ### Quick Fetch Function
 
@@ -182,7 +183,7 @@ df_intraday, df_daily = fetch_data(
 )
 ```
 
----
+#
 
 ### Data Persistence with DataManager
 
@@ -228,7 +229,7 @@ info = manager.get_data_info('NVDA', 'intraday')
 deleted = manager.cleanup_old_versions('NVDA', 'intraday', keep_n=3)
 ```
 
----
+#
 
 ### Risk-Free Rate
 
@@ -243,7 +244,7 @@ rf_series = load_risk_free_rate('data/dtb3.csv')
 # Returns pandas Series indexed by date with rates in decimal form
 ```
 
----
+#
 
 ### Market Calendar
 
@@ -280,7 +281,7 @@ calendar_dict = calendar.to_dict()
 calendar_dict = get_market_calendar()
 ```
 
----
+#
 
 ### Direct Connector Access
 
@@ -323,7 +324,7 @@ df_multi = YFinanceConnector.download_multiple(
 |----------|-------------|
 | `POLYGON_API_KEY` | Polygon.io API key (enables Polygon as default source) |
 
----
+#
 
 ### FetchConfig Options
 
@@ -337,7 +338,7 @@ df_multi = YFinanceConnector.download_multiple(
 | `include_dividends` | bool | True | Fetch and merge dividend data |
 | `adjust_prices` | bool | True | Use split/dividend adjusted prices |
 
----
+#
 
 ### Supported Intervals
 
@@ -353,7 +354,7 @@ df_multi = YFinanceConnector.download_multiple(
 | 1 week | ✓ | ✓ | Full history |
 | 1 month | ✓ | ✓ | Full history |
 
----
+#
 
 ## Integration with Backtesting
 
