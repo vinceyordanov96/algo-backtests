@@ -13,6 +13,7 @@ from enum import Enum
 class StrategyType(Enum):
     """Strategy type enumeration."""
     MOMENTUM = "momentum"
+    MOMENTUM_ATR = "momentum_atr"
     MEAN_REVERSION = "mean_reversion"
     MEAN_REVERSION_RSI = "mean_reversion_rsi"
     STAT_ARB = "stat_arb"
@@ -31,13 +32,13 @@ class CommonParameters:
     stop_loss_pcts: List[float] = field(default_factory=lambda: [0.02])
     take_profit_pcts: List[float] = field(default_factory=lambda: [0.04])
     max_drawdown_pcts: List[float] = field(default_factory=lambda: [0.15])
-    
+
     # Position sizing parameters
     sizing_types: List[str] = field(default_factory=lambda: ['vol_target'])
-    kelly_fractions: List[float] = field(default_factory=lambda: [0.5])
-    kelly_lookbacks: List[int] = field(default_factory=lambda: [60])
-    kelly_min_trades: int = 30
-    kelly_vol_blend_weight: float = 0.5
+    kelly_fractions: Optional[List[float]] = field(default_factory=lambda: [0.5])
+    kelly_lookbacks: Optional[List[int]] = field(default_factory=lambda: [60])
+    kelly_min_trades: Optional[int] = field(default_factory=lambda: 30)
+    kelly_vol_blend_weight: Optional[float] = field(default_factory=lambda: 0.5)
     
     # Execution parameters
     commission: float = 0.0035
@@ -75,6 +76,13 @@ class CommonParameters:
 class MomentumParameters:
     """Parameters specific to momentum strategy."""
     band_multipliers: List[float] = field(default_factory=lambda: [0.8, 1.0, 1.2, 1.5])
+
+
+@dataclass
+class MomentumATRParameters:
+    """Parameters specific to ATR-based momentum strategy."""
+    atr_multipliers: List[float] = field(default_factory=lambda: [1.5, 2.0, 2.5, 3.0])
+    atr_periods: List[int] = field(default_factory=lambda: [10, 14, 20])
 
 
 @dataclass
@@ -147,6 +155,7 @@ class SimulationConfig:
     # Parameter groups
     common: CommonParameters = field(default_factory=CommonParameters)
     momentum: MomentumParameters = field(default_factory=MomentumParameters)
+    momentum_atr: MomentumATRParameters = field(default_factory=MomentumATRParameters)
     mean_reversion: MeanReversionParameters = field(default_factory=MeanReversionParameters)
     mean_reversion_rsi: MeanReversionRSIParameters = field(default_factory=MeanReversionRSIParameters)
     stat_arb: StatArbParameters = field(default_factory=StatArbParameters)
@@ -155,11 +164,22 @@ class SimulationConfig:
     # Parallel execution settings
     n_workers: Optional[int] = None  # None = auto (CPU count - 2)
     
+    
     def get_strategy_parameters(self) -> Dict[str, Any]:
-        """Get parameters for the configured strategy type."""
+        """
+        Get parameters for the configured strategy type.
+        
+        Returns:
+            Dictionary of strategy parameters
+        """
         if self.strategy_type == StrategyType.MOMENTUM:
             return {
                 'band_multipliers': self.momentum.band_multipliers,
+            }
+        elif self.strategy_type == StrategyType.MOMENTUM_ATR:
+            return {
+                'atr_multipliers': self.momentum_atr.atr_multipliers,
+                'atr_periods': self.momentum_atr.atr_periods,
             }
         elif self.strategy_type == StrategyType.MEAN_REVERSION:
             return {
@@ -214,6 +234,12 @@ class SimulationConfig:
         
         if self.strategy_type == StrategyType.MOMENTUM:
             strategy_count = len(self.momentum.band_multipliers)
+            ticker_count = len(self.tickers)
+        elif self.strategy_type == StrategyType.MOMENTUM_ATR:
+            strategy_count = (
+                len(self.momentum_atr.atr_multipliers) *
+                len(self.momentum_atr.atr_periods)
+            )
             ticker_count = len(self.tickers)
         elif self.strategy_type == StrategyType.MEAN_REVERSION:
             mr = self.mean_reversion
@@ -284,6 +310,11 @@ class SimulationConfig:
             for key, value in momentum_data.items():
                 if hasattr(config.momentum, key):
                     setattr(config.momentum, key, value)
+        elif strategy_type == StrategyType.MOMENTUM_ATR:
+            momentum_atr_data = data.get('momentum_atr', {})
+            for key, value in momentum_atr_data.items():
+                if hasattr(config.momentum_atr, key):
+                    setattr(config.momentum_atr, key, value)
         elif strategy_type == StrategyType.MEAN_REVERSION:
             mr_data = data.get('mean_reversion', {})
             for key, value in mr_data.items():
@@ -322,6 +353,10 @@ class SimulationConfig:
             'common': self.common.to_dict(),
             'momentum': {
                 'band_multipliers': self.momentum.band_multipliers,
+            },
+            'momentum_atr': {
+                'atr_multipliers': self.momentum_atr.atr_multipliers,
+                'atr_periods': self.momentum_atr.atr_periods,
             },
             'mean_reversion': {
                 'zscore_lookbacks': self.mean_reversion.zscore_lookbacks,

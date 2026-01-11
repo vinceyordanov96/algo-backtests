@@ -65,7 +65,7 @@ def main():
     
     # Common parameters (shared across strategies)
     common_params = CommonParameters(
-        trade_frequencies=[15, 30, 45, 60],
+        trade_frequencies=[30, 60],
         target_volatilities=[0.015, 0.02, 0.025, 0.03],
         stop_loss_pcts=[0.015, 0.02, 0.025],
         take_profit_pcts=[0.03, 0.035, 0.04],
@@ -82,7 +82,7 @@ def main():
     
     # Momentum-specific parameters
     momentum_params = MomentumParameters(
-        band_multipliers=[0.8, 0.9, 1.0, 1.1, 1.2],
+        band_multipliers=[0.9, 1.0, 1.1],
     )
     
     # Create simulation config

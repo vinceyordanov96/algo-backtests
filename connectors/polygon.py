@@ -83,7 +83,7 @@ class PolygonConnector(BaseConnector):
     def __init__(
         self,
         api_key: str = None,
-        enforce_rate_limit: bool = True,
+        enforce_rate_limit: bool = False,
         requests_per_minute: int = 5
     ):
         """
@@ -186,7 +186,7 @@ class PolygonConnector(BaseConnector):
             total_raw_records += len(results)
             
             # Log progress for each page
-            logger.info(f"  Page {page_count}: Fetched {len(results)} records (Total raw: {total_raw_records:,})")
+            logger.info(f"Page {page_count}: Fetched {len(results)} records (Total raw: {total_raw_records:,})")
             
             # Process results
             records_added = 0
@@ -367,8 +367,8 @@ class PolygonConnector(BaseConnector):
         """
         config = FetchConfig(
             ticker=ticker,
-            start_date=start_date or '2024-01-01',
-            end_date=end_date or str(date.today()),
+            start_date='2021-02-01', #start_date or '2024-01-01',
+            end_date='2025-12-31', #end_date or str(date.today()),
             interval=DataInterval.MINUTE_1,
             include_dividends=True
         )

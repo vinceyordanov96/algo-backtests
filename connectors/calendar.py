@@ -55,6 +55,51 @@ class MarketCalendar:
             Dictionary mapping year to list of holiday dates
         """
         return {
+            2019: [
+                date(2019, 1, 1),    # New Year's Day
+                date(2019, 1, 21),   # MLK Day
+                date(2019, 2, 18),   # Presidents Day
+                date(2019, 4, 19),   # Good Friday
+                date(2019, 5, 27),   # Memorial Day
+                date(2019, 6, 19),   # Juneteenth
+                date(2019, 7, 4),    # Independence Day
+                date(2019, 9, 2),    # Labor Day
+                date(2019, 11, 28),  # Thanksgiving
+                date(2019, 12, 25),  # Christmas
+            ],
+            2020: [
+                date(2020, 1, 1),    # New Year's Day
+                date(2020, 1, 20),   # MLK Day
+                date(2020, 2, 17),   # Presidents Day
+                date(2020, 4, 10),   # Good Friday
+                date(2020, 5, 25),   # Memorial Day
+                date(2020, 7, 3),    # Independence Day
+                date(2020, 9, 7),    # Labor Day
+                date(2020, 11, 26),  # Thanksgiving
+                date(2020, 12, 25),  # Christmas
+            ],
+            2021: [
+                date(2021, 1, 1),    # New Year's Day
+                date(2021, 1, 18),   # MLK Day
+                date(2021, 2, 15),   # Presidents Day
+                date(2021, 4, 2),    # Good Friday
+                date(2021, 5, 31),   # Memorial Day
+                date(2021, 7, 5),    # Independence Day
+                date(2021, 9, 6),    # Labor Day
+                date(2021, 11, 25),  # Thanksgiving
+                date(2021, 12, 24),  # Christmas
+            ],
+            2022: [
+                date(2022, 1, 17),   # MLK Day
+                date(2022, 2, 21),   # Presidents Day
+                date(2022, 4, 15),   # Good Friday
+                date(2022, 5, 30),   # Memorial Day
+                date(2022, 6, 20),   # Juneteenth
+                date(2022, 7, 4),    # Independence Day
+                date(2022, 9, 5),    # Labor Day
+                date(2022, 11, 24),  # Thanksgiving
+                date(2022, 12, 26),  # Christmas
+            ],
             2023: [
                 date(2023, 1, 2),    # New Year's Day (observed)
                 date(2023, 1, 16),   # MLK Day
@@ -113,6 +158,23 @@ class MarketCalendar:
             Dictionary mapping year to dict of date -> close time
         """
         return {
+            2019: {
+                date(2019, 7, 3): self.EARLY_CLOSE,    # Day before Independence Day
+                date(2019, 11, 29): self.EARLY_CLOSE,  # Day after Thanksgiving
+                date(2019, 12, 24): self.EARLY_CLOSE,  # Christmas Eve
+            },
+            2020: {
+                date(2020, 11, 27): self.EARLY_CLOSE,  # Day after Thanksgiving
+                date(2020, 12, 24): self.EARLY_CLOSE,  # Christmas Eve
+            },
+            2021: {
+                date(2021, 11, 26): self.EARLY_CLOSE,  # Day after Thanksgiving
+                date(2021, 12, 24): self.EARLY_CLOSE,  # Christmas Eve
+            },
+            2022: {
+                date(2022, 7, 3): self.EARLY_CLOSE,    # Day before Independence Day
+                date(2022, 11, 25): self.EARLY_CLOSE,  # Day after Thanksgiving
+            },
             2023: {
                 date(2023, 7, 3): self.EARLY_CLOSE,    # Day before Independence Day
                 date(2023, 11, 24): self.EARLY_CLOSE,  # Day after Thanksgiving

@@ -21,6 +21,7 @@ from core.portfolio import (
 from core.metrics import MetricsCalculator
 
 from strats.momentum import Momentum
+from strats.momentum_atr import MomentumATR
 from strats.mean_reversion import MeanReversion
 from strats.mean_reversion_rsi import MeanReversionRSI
 from strats.stat_arb import StatArb
@@ -41,6 +42,7 @@ warnings.filterwarnings('ignore')
 class StrategyType:
     """Strategy type constants."""
     MOMENTUM = "momentum"
+    MOMENTUM_ATR = "momentum_atr"
     MEAN_REVERSION = "mean_reversion"
     MEAN_REVERSION_RSI = "mean_reversion_rsi"
     STAT_ARB = "stat_arb"
@@ -166,6 +168,40 @@ class BacktestEngine:
         return Momentum.generate_signals(
             close_prices, vwap, sigma_open,
             reference_high, reference_low, band_mult
+        )
+    
+    def _generate_signals_momentum_atr(
+        self,
+        close_prices: np.ndarray,
+        high_prices: np.ndarray,
+        low_prices: np.ndarray,
+        vwap: np.ndarray,
+        reference_high: float,
+        reference_low: float,
+        config: dict,
+        lookback: int = 14
+    ) -> np.ndarray:
+        """
+        Generate ATR-based momentum strategy signals.
+        
+        Args:
+            close_prices: Array of close prices
+            high_prices: Array of high prices
+            low_prices: Array of low prices
+            vwap: Array of VWAP values
+            reference_high: Reference price for upper band
+            reference_low: Reference price for lower band
+            config: Strategy configuration
+            
+        Returns:
+            Array of signals: 1 (long), -1 (exit), 0 (hold)
+        """
+        atr_mult = config.get('atr_mult', 2.0)
+        atr_period = config.get('atr_period', 14)
+        
+        return MomentumATR.generate_signals_trailing(
+            close_prices, high_prices, low_prices, vwap,
+            atr_mult, atr_period, lookback
         )
     
     def _generate_signals_mean_reversion(
@@ -630,6 +666,19 @@ class BacktestEngine:
                 
                 signals = self._generate_signals_momentum(
                     close_prices, vwap, sigma_open,
+                    reference_high, reference_low, config
+                )
+            
+            elif strategy_type == StrategyType.MOMENTUM_ATR:
+                prev_dividend = prev_day_info['dividend']
+                prev_close_adjusted = prev_day_info['close_prices'][-1] - prev_dividend
+                open_price = current_day_info['open']
+                
+                reference_high = max(open_price, prev_close_adjusted)
+                reference_low = min(open_price, prev_close_adjusted)
+                
+                signals = self._generate_signals_momentum_atr(
+                    close_prices, high_prices, low_prices, vwap,
                     reference_high, reference_low, config
                 )
             

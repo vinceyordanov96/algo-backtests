@@ -29,6 +29,7 @@ Example:
 import os
 import logging
 import pandas as pd
+from dotenv import load_dotenv
 from datetime import date, datetime
 from typing import Tuple, Optional, Union, Dict, Any
 
@@ -44,6 +45,7 @@ from .yfinance import YFinanceConnector
 
 logger = logging.getLogger(__name__)
 
+load_dotenv()
 
 # Registry of available connectors
 CONNECTORS: Dict[DataSource, type] = {
@@ -140,8 +142,8 @@ class DataFetcher:
                 - For yfinance: progress
         """
         self.ticker = ticker.upper()
-        self.start_date = start_date or '2024-01-01'
-        self.end_date = end_date or str(date.today())
+        self.start_date = '2021-02-01' #start_date or '2019-01-01'
+        self.end_date = '2025-12-31' #end_date or str(date.today())
         
         # Handle interval
         if isinstance(interval, str):

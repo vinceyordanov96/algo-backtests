@@ -60,6 +60,10 @@ class TaskGenerator:
             return self._generate_momentum_tasks(
                 ticker, df, df_daily, market_calendar, risk_free_rate_series
             )
+        elif self.config.strategy_type == StrategyType.MOMENTUM_ATR:
+            return self._generate_momentum_atr_tasks(
+                ticker, df, df_daily, market_calendar, risk_free_rate_series
+            )
         elif self.config.strategy_type == StrategyType.MEAN_REVERSION:
             return self._generate_mean_reversion_tasks(
                 ticker, df, df_daily, market_calendar, risk_free_rate_series
@@ -150,6 +154,53 @@ class TaskGenerator:
             task.update({
                 'strategy_type': StrategyType.MOMENTUM,
                 'band_mult': band_mult,
+                'trade_freq': trade_freq,
+                'target_vol': target_vol,
+                'stop_loss_pct': stop_loss,
+                'take_profit_pct': take_profit,
+                'max_drawdown_pct': max_dd,
+                'sizing_type': sizing_type,
+                'kelly_fraction': kelly_fraction,
+                'kelly_lookback': kelly_lookback,
+            })
+            tasks.append(task)
+        
+        return tasks
+
+    def _generate_momentum_atr_tasks(
+        self,
+        ticker: str,
+        df: pd.DataFrame,
+        df_daily: pd.DataFrame,
+        market_calendar: Dict,
+        risk_free_rate_series: Optional[pd.Series]
+    ) -> List[Dict[str, Any]]:
+        """Generate ATR-based momentum strategy tasks."""
+        tasks = []
+        common = self._get_common_params()
+        base = self._base_task(ticker, df, df_daily, market_calendar, risk_free_rate_series)
+        
+        # Generate all parameter combinations
+        param_lists = [
+            self.config.momentum_atr.atr_multipliers,
+            self.config.momentum_atr.atr_periods,
+            common['trade_freq'],
+            common['target_vol'],
+            common['stop_loss_pct'],
+            common['take_profit_pct'],
+            common['max_drawdown_pct'],
+            common['sizing_type'],
+            common['kelly_fraction'],
+            common['kelly_lookback'],
+        ]
+        
+        for (atr_mult, atr_period, trade_freq, target_vol, 
+             stop_loss, take_profit, max_dd, sizing_type, kelly_fraction, kelly_lookback) in product(*param_lists):
+            task = base.copy()
+            task.update({
+                'strategy_type': StrategyType.MOMENTUM_ATR,
+                'atr_mult': atr_mult,
+                'atr_period': atr_period,
                 'trade_freq': trade_freq,
                 'target_vol': target_vol,
                 'stop_loss_pct': stop_loss,
@@ -487,6 +538,10 @@ def build_backtest_config(task: Dict[str, Any]) -> Dict[str, Any]:
     # Add strategy-specific parameters
     if strategy_type == StrategyType.MOMENTUM:
         config['band_mult'] = task['band_mult']
+
+    elif strategy_type == StrategyType.MOMENTUM_ATR:
+        config['atr_mult'] = task['atr_mult']
+        config['atr_period'] = task['atr_period']
     
     elif strategy_type == StrategyType.MEAN_REVERSION:
         config['zscore_lookback'] = task['zscore_lookback']

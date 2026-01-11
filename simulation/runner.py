@@ -29,6 +29,143 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _prewarm_numba_jit_cache() -> None:
+    """
+    Pre-warm Numba JIT compilation cache before parallel execution.
+    
+    This compiles all numba functions in the main process, creating
+    cache files that worker processes can read. Without this, each
+    worker would compile functions independently, causing significant
+    slowdown (3-4 tasks/sec vs 10+ tasks/sec).
+    
+    Call this once before spawning parallel workers.
+    """
+    logger.info("Pre-warming Numba JIT cache...")
+    
+    # Create small dummy arrays for compilation
+    n = 100
+    dummy_prices = np.random.randn(n).cumsum() + 100
+    dummy_prices = dummy_prices.astype(np.float64)
+    dummy_high = (dummy_prices + np.abs(np.random.randn(n))).astype(np.float64)
+    dummy_low = (dummy_prices - np.abs(np.random.randn(n))).astype(np.float64)
+    dummy_vwap = dummy_prices.copy()
+    dummy_signals = np.zeros(n, dtype=np.int32)
+    dummy_signals[10] = 1
+    dummy_signals[50] = -1
+    dummy_mask = np.ones(n, dtype=np.bool_)
+    dummy_returns = np.random.randn(100) * 0.01
+    
+    # Import and compile core portfolio functions
+    try:
+        from core.portfolio import (
+            simulate_positions_numba,
+            calculate_portfolio_values_numba,
+        )
+        
+        # Trigger compilation
+        simulate_positions_numba(
+            dummy_prices, dummy_signals, dummy_mask,
+            0.02, 0.04, 0, 0.0
+        )
+        
+        positions = np.zeros(n, dtype=np.int32)
+        positions[20:60] = 1
+        entry_prices = np.zeros(n, dtype=np.float64)
+        entry_prices[20:60] = 100.0
+        
+        calculate_portfolio_values_numba(
+            dummy_prices, positions, entry_prices,
+            100000.0, 0, 0.0035, 0.1
+        )
+        
+        logger.debug("  - core.portfolio functions compiled")
+    except ImportError as e:
+        logger.warning(f"  - Could not compile core.portfolio: {e}")
+    
+    # Try to compile Kelly functions if available
+    try:
+        from core.portfolio import calculate_kelly_position_size_numba
+        calculate_kelly_position_size_numba(
+            dummy_returns, 100, 60, 0.5, 1.0, 30
+        )
+        logger.debug("  - core.portfolio Kelly functions compiled")
+    except ImportError:
+        pass  # Kelly functions may not be available
+    
+    # Import and compile momentum ATR functions
+    try:
+        from strats.momentum_atr import (
+            calculate_true_range_numba,
+            calculate_atr_numba,
+            calculate_atr_bands_numba,
+            calculate_trailing_atr_bands_numba,
+            MomentumATR
+        )
+        
+        # Trigger compilation
+        calculate_true_range_numba(dummy_high, dummy_low, dummy_prices)
+        atr = calculate_atr_numba(dummy_high, dummy_low, dummy_prices, 14)
+        calculate_atr_bands_numba(dummy_prices, atr, 100.0, 2.0)
+        calculate_trailing_atr_bands_numba(dummy_prices, dummy_high, dummy_low, atr, 2.0, 20)
+        
+        # Also compile through the class methods
+        MomentumATR.generate_signals(
+            dummy_prices, dummy_high, dummy_low, dummy_vwap,
+            100.0, 99.0, 2.0, 14
+        )
+        MomentumATR.generate_signals_trailing(
+            dummy_prices, dummy_high, dummy_low, dummy_vwap,
+            2.0, 14
+        )
+        
+        logger.debug("  - strats.momentum_atr functions compiled")
+    except ImportError as e:
+        logger.warning(f"  - Could not compile strats.momentum_atr: {e}")
+    
+    # Import and compile standard momentum functions
+    try:
+        from strats.momentum import Momentum
+        dummy_sigma = np.ones(n, dtype=np.float64) * 0.02
+        Momentum.generate_signals(
+            dummy_prices, dummy_vwap, dummy_sigma,
+            100.0, 99.0, 1.0
+        )
+        logger.debug("  - strats.momentum functions compiled")
+    except ImportError as e:
+        logger.warning(f"  - Could not compile strats.momentum: {e}")
+    
+    # Import and compile mean reversion functions
+    try:
+        from strats.mean_reversion import MeanReversion
+        MeanReversion.generate_signals(dummy_prices, 20, 2.0, 2.0, 0.0)
+        logger.debug("  - strats.mean_reversion functions compiled")
+    except ImportError as e:
+        logger.warning(f"  - Could not compile strats.mean_reversion: {e}")
+    
+    # Import and compile RSI mean reversion functions
+    try:
+        from strats.mean_reversion_rsi import MeanReversionRSI
+        MeanReversionRSI.generate_signals(dummy_prices, 14, 30.0, 70.0, 50, True)
+        logger.debug("  - strats.mean_reversion_rsi functions compiled")
+    except ImportError as e:
+        logger.warning(f"  - Could not compile strats.mean_reversion_rsi: {e}")
+    
+    # Import and compile stat arb functions
+    try:
+        from strats.stat_arb import StatArb
+        dummy_prices_b = dummy_prices + np.random.randn(n) * 2
+        StatArb.generate_signals(
+            dummy_prices, dummy_prices_b.astype(np.float64),
+            30, 2.0, 0.0, None, True
+        )
+        logger.debug("  - strats.stat_arb functions compiled")
+    except ImportError as e:
+        logger.warning(f"  - Could not compile strats.stat_arb: {e}")
+    
+    logger.info("Numba JIT cache pre-warming complete")
+
+
+
 def _run_single_backtest(task: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """
     Run a single backtest task.
@@ -131,6 +268,10 @@ def _run_single_backtest(task: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         # Add strategy-specific parameters
         if strategy_type == StrategyType.MOMENTUM:
             result['Band Multiplier'] = task['band_mult']
+        
+        elif strategy_type == StrategyType.MOMENTUM_ATR:
+            result['ATR Multiplier'] = task['atr_mult']
+            result['ATR Period'] = task['atr_period']
         
         elif strategy_type == StrategyType.MEAN_REVERSION:
             result['Z-Score Lookback'] = task['zscore_lookback']
@@ -377,6 +518,11 @@ class SimulationRunner:
         if not tasks:
             logger.warning("No tasks to run")
             return pd.DataFrame()
+        
+        # Pre-warm Numba JIT cache before parallel execution
+        # This compiles functions in the main process so workers can use cached versions
+        if parallel and len(tasks) > 1:
+            _prewarm_numba_jit_cache()
         
         # Run backtests
         start_time = time.time()
@@ -728,6 +874,10 @@ class SimulationRunner:
         if strategy_type == StrategyType.MOMENTUM:
             config['band_mult'] = float(row.get('Band Multiplier', 1.0))
         
+        elif strategy_type == StrategyType.MOMENTUM_ATR:
+            config['atr_mult'] = float(row.get('ATR Multiplier', 2.0))
+            config['atr_period'] = int(row.get('ATR Period', 14))
+        
         elif strategy_type == StrategyType.MEAN_REVERSION:
             config['zscore_lookback'] = int(row.get('Z-Score Lookback', 20))
             config['n_std_upper'] = float(row.get('N Std Upper', 2.0))
@@ -894,7 +1044,7 @@ def main():
         '--strategy',
         type=str,
         default='momentum',
-        choices=['momentum', 'mean_reversion', 'mean_reversion_rsi', 'stat_arb', 'supervised'],
+        choices=['momentum', 'momentum_atr', 'mean_reversion', 'mean_reversion_rsi', 'stat_arb', 'supervised'],
         help='Strategy type'
     )
     parser.add_argument(

@@ -92,8 +92,8 @@ class StandardSchema:
 class FetchConfig:
     """Configuration for data fetching."""
     ticker: str
-    start_date: str  # YYYY-MM-DD
-    end_date: str    # YYYY-MM-DD
+    start_date: str = '2019-01-01' # YYYY-MM-DD
+    end_date: str = '2025-12-31' # YYYY-MM-DD
     interval: DataInterval = DataInterval.MINUTE_1
     include_prepost: bool = False
     include_dividends: bool = True

@@ -30,6 +30,7 @@ Example usage:
 from .base import BaseStrategy, StatefulStrategy, PairsStrategy, SignalResult
 from .factory import StrategyType, StrategyFactory
 from .momentum import Momentum
+from .momentum_atr import MomentumATR
 from .mean_reversion import MeanReversion
 from .mean_reversion_rsi import MeanReversionRSI
 from .stat_arb import StatArb
@@ -74,6 +75,7 @@ __all__ = [
     
     # Strategy implementations
     'Momentum',
+    'MomentumATR',
     'MeanReversion',
     'MeanReversionRSI',
     'StatArb',

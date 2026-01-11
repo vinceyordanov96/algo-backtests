@@ -11,6 +11,7 @@ from typing import Dict, Any, Callable, List
 from enum import Enum
 
 from .momentum import Momentum
+from .momentum_atr import MomentumATR
 from .mean_reversion import MeanReversion
 from .mean_reversion_rsi import MeanReversionRSI
 from .stat_arb import StatArb
@@ -21,13 +22,15 @@ class StrategyType(Enum):
     Enumeration of available trading strategies.
     
     Values:
-        MOMENTUM: Trend-following strategy based on price momentum
+        MOMENTUM: Trend-following strategy based on price momentum (sigma_open)
+        MOMENTUM_ATR: ATR-based trend-following strategy
         MEAN_REVERSION: Z-score based mean reversion
         MEAN_REVERSION_RSI: RSI + SMA mean reversion
         STAT_ARB: Statistical arbitrage (pairs trading)
         SUPERVISED: Machine learning based strategy
     """
     MOMENTUM = "momentum"
+    MOMENTUM_ATR = "momentum_atr"
     MEAN_REVERSION = "mean_reversion"
     MEAN_REVERSION_RSI = "mean_reversion_rsi"
     STAT_ARB = "stat_arb"
@@ -55,6 +58,7 @@ class StrategyFactory:
     
     _strategies: Dict[StrategyType, Callable] = {
         StrategyType.MOMENTUM: Momentum.generate_signals,
+        StrategyType.MOMENTUM_ATR: MomentumATR.generate_signals,
         StrategyType.MEAN_REVERSION: MeanReversion.generate_signals,
         StrategyType.MEAN_REVERSION_RSI: MeanReversionRSI.generate_signals,
         StrategyType.STAT_ARB: StatArb.generate_signals,
@@ -125,6 +129,7 @@ class StrategyFactory:
         """
         strategy_classes = {
             StrategyType.MOMENTUM: Momentum,
+            StrategyType.MOMENTUM_ATR: MomentumATR,
             StrategyType.MEAN_REVERSION: MeanReversion,
             StrategyType.MEAN_REVERSION_RSI: MeanReversionRSI,
             StrategyType.STAT_ARB: StatArb,
@@ -155,10 +160,7 @@ class StrategyFactory:
             'stop_loss_pcts': [0.01, 0.02, 0.03],
             'take_profit_pcts': [0.04, 0.05, 0.06],
             'max_drawdown_pcts': [0.10, 0.15, 0.20],
-            'target_volatilities': [0.015, 0.02, 0.025],
-            'sizing_types': ['vol_target', 'kelly', 'kelly_vol_blend'],
-            'kelly_fractions': [0.25, 0.5],
-            'kelly_lookbacks': [60, 120],
+            'target_volatilities': [0.015, 0.02, 0.025]
         }
 
     @staticmethod
@@ -174,13 +176,17 @@ class StrategyFactory:
         """
         grids = {
             StrategyType.MOMENTUM: {
-                'band_mult': [0.8, 0.9, 1.0, 1.1],
+                'band_mult': [0.8, 1.0, 1.2, 1.5],
+            },
+            StrategyType.MOMENTUM_ATR: {
+                'atr_mult': [1.5, 2.0, 2.5, 3.0],
+                'atr_period': [10, 14, 20],
             },
             StrategyType.MEAN_REVERSION: {
-                'zscore_lookback': [20, 30],
-                'n_std_upper': [1.5, 2.0],
-                'n_std_lower': [1.5, 2.0],
-                'exit_threshold': [0.0],
+                'zscore_lookback': [10, 20, 30],
+                'n_std_upper': [1.5, 2.0, 2.5],
+                'n_std_lower': [1.5, 2.0, 2.5],
+                'exit_threshold': [0.0, 0.5],
             },
             StrategyType.MEAN_REVERSION_RSI: {
                 'rsi_period': [7, 10, 14],
@@ -195,8 +201,8 @@ class StrategyFactory:
                 'use_dynamic_hedge': [True, False],
             },
             StrategyType.SUPERVISED: {
-                'buy_threshold': [0.505, 0.55, 0.60, 0.65],
-                'sell_threshold': [0.35, 0.40, 0.45, 0.495],
+                'buy_threshold': [0.50, 0.55, 0.60, 0.65],
+                'sell_threshold': [0.35, 0.40, 0.45, 0.50],
             },
         }
         
@@ -224,6 +230,7 @@ class StrategyFactory:
         
         required_by_strategy = {
             StrategyType.MOMENTUM: ['band_mult'],
+            StrategyType.MOMENTUM_ATR: ['atr_mult', 'atr_period'],
             StrategyType.MEAN_REVERSION: ['zscore_lookback', 'n_std_upper', 'n_std_lower'],
             StrategyType.MEAN_REVERSION_RSI: ['rsi_period', 'rsi_oversold', 'rsi_overbought', 'sma_period'],
             StrategyType.STAT_ARB: ['zscore_lookback', 'entry_threshold'],
@@ -286,6 +293,10 @@ class StrategyFactory:
         strategy_defaults = {
             StrategyType.MOMENTUM: {
                 'band_mult': 1.0,
+            },
+            StrategyType.MOMENTUM_ATR: {
+                'atr_mult': 2.0,
+                'atr_period': 14,
             },
             StrategyType.MEAN_REVERSION: {
                 'zscore_lookback': 20,

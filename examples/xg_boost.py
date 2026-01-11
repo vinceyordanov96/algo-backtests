@@ -195,9 +195,9 @@ def main():
             model_type=MODEL_TYPE,
             forecast_horizon=FORECAST_HORIZON,
             resample_freq=RESAMPLE_FREQ,
-            train_ratio=0.6,
-            valid_ratio=0.2,
-            test_ratio=0.2,
+            train_ratio=0.8,
+            valid_ratio=0.1,
+            test_ratio=0.1,
             output_dir=f'outputs/models/{TICKER}',
         )
         
